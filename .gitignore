@@ -53,6 +53,7 @@ instance/
 # Vector stores & embeddings
 chroma/
 chroma.db
+chroma_db/
 qdrant_storage/
 *.hnswlib
 
