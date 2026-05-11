@@ -8,10 +8,6 @@ def chunk_text(
     text: str,
     metadata: Dict[str, Any] = {},
 ) -> List[Dict[str, Any]]:
-    """
-    Split a plain string into chunks.
-    Returns a list of dicts with 'text' and 'metadata' keys.
-    """
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=settings.CHUNK_SIZE,
         chunk_overlap=settings.CHUNK_OVERLAP,
@@ -29,10 +25,6 @@ def chunk_text(
 def chunk_documents(
     documents: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
-    """
-    Takes a list of {text, metadata} dicts (output of any loader)
-    and returns a flat list of chunked {text, metadata} dicts.
-    """
     all_chunks = []
 
     for doc in documents:
@@ -44,7 +36,6 @@ def chunk_documents(
 
     return all_chunks
 if __name__ == "__main__":
-    # quick sanity check
     sample = [
         {
             "text": "Retrieval Augmented Generation (RAG) is a technique that combines "
