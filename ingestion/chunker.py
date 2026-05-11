@@ -1,9 +1,21 @@
-# ingestion/chunker.py
-
+from pathlib import Path
+import sys
 from typing import List, Dict, Any
+
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+
+if __package__ is None or __package__ == "":
+    project_root = Path(__file__).resolve().parents[1]
+    project_root_str = str(project_root)
+    if project_root_str not in sys.path:
+        sys.path.insert(0, project_root_str)
+
 from configs.settings import get_settings
+
 settings = get_settings()
+
+
 def chunk_text(
     text: str,
     metadata: Dict[str, Any] = {},
@@ -35,6 +47,8 @@ def chunk_documents(
         all_chunks.extend(chunks)
 
     return all_chunks
+
+
 if __name__ == "__main__":
     sample = [
         {
