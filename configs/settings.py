@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     TOGETHER_API_KEY: str = ""
     OLLAMA_BASE_URL: str = "http://localhost:11434"
-    LLM_MODEL_NAME: str = "llama3-8b-8192"   
+    LLM_MODEL_NAME: str = "llama-3.1-8b-instant"   
     LLM_TEMPERATURE: float = 0.2
     LLM_MAX_TOKENS: int = 1024
 
