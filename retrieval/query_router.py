@@ -28,7 +28,9 @@ def classify_query(query: str) -> str:
     return "general"
 
 
-def route_and_retrieve(query: str) -> Dict[str, Any]:
+def route_and_retrieve(query: str, session_id: str = "default") -> Dict[str, Any]:
+    # `session_id` is accepted for compatibility with the RAG pipeline
+    # (chat history and session-aware routing) but is not used here yet.
     query_type = classify_query(query)
 
     if query_type == "factual":
