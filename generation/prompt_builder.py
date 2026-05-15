@@ -1,11 +1,13 @@
+# generation/prompt_builder.py
 
 from typing import List, Dict, Any
 
 
 SYSTEM_PROMPT = """You are ResearchMind, an intelligent research assistant.
-Answer the user's question using ONLY the context provided below.
-If the context does not contain enough information, say "I don't have enough information to answer this."
-Always cite which source your answer comes from."""
+Your job is to answer questions clearly and concisely in your own words.
+Use the provided context to form your answer — do NOT copy paste from it.
+If the context doesn't have enough information, say "I don't have enough information to answer this."
+Keep answers under 4 sentences unless the question specifically needs more detail."""
 
 
 def format_context(chunks: List[Dict[str, Any]]) -> str:
@@ -23,21 +25,4 @@ def build_prompt(query: str, chunks: List[Dict[str, Any]]) -> str:
 
 Question: {query}
 
-Answer:"""
-
-
-if __name__ == "__main__":
-    sample_chunks = [
-        {
-            "text": "RAG combines a retrieval system with a language model to generate accurate answers.",
-            "metadata": {"source": "wikipedia", "page": 1},
-        },
-        {
-            "text": "The retrieval step fetches relevant documents from a knowledge base before generation.",
-            "metadata": {"source": "arxiv_paper", "page": 3},
-        },
-    ]
-
-    prompt = build_prompt("How does RAG work?", sample_chunks)
-    print("System Prompt:\n", SYSTEM_PROMPT)
-    print("\nUser Prompt:\n", prompt)
+Answer in your own words, concisely:"""
