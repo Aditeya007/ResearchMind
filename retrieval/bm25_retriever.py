@@ -55,9 +55,22 @@ def build_index(chunks: List[Dict[str, Any]]) -> None:
     print(f"[bm25] Index built with {len(chunks)} chunks")
 
 
+def load_index_from_vector_store() -> None:
+    from retrieval.vector_store import get_all_chunks
+
+    chunks = get_all_chunks()
+    if not chunks:
+        return
+
+    build_index(chunks)
+
+
 def search(query: str, top_k: Optional[int] = None) -> List[Dict[str, Any]]:
     if _bm25 is None or _corpus is None:
-        raise RuntimeError("BM25 index not built. Call build_index() first.")
+        load_index_from_vector_store()
+
+    if _bm25 is None or _corpus is None:
+        raise RuntimeError("BM25 index not built. Ingest a source first.")
 
     k = top_k if top_k is not None else settings.TOP_K_SPARSE
     tokenized_query = query.lower().split()

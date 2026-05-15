@@ -75,6 +75,20 @@ def get_collection_count() -> int:
     return get_collection().count()
 
 
+def get_all_chunks() -> List[Dict[str, Any]]:
+    collection = get_collection()
+    results = collection.get(include=["documents", "metadatas"])
+
+    documents = results.get("documents") or []
+    metadatas = results.get("metadatas") or []
+
+    return [
+        {"text": text, "metadata": meta}
+        for text, meta in zip(documents, metadatas)
+        if text is not None and meta is not None
+    ]
+
+
 if __name__ == "__main__":
     from ingestion.pipeline import ingest_url
 

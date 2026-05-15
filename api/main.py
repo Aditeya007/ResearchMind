@@ -1,3 +1,6 @@
+# api/main.py
+
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from db.session import init_db
@@ -6,10 +9,19 @@ from configs.settings import get_settings
 
 settings = get_settings()
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    print("[api] ResearchMind API is running.")
+    yield
+
+
 app = FastAPI(
     title="ResearchMind API",
     description="Multi-source Adaptive RAG with Hallucination Detection",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -22,12 +34,6 @@ app.add_middleware(
 app.include_router(ingest.router)
 app.include_router(query.router)
 app.include_router(feedback.router)
-
-
-@app.on_event("startup")
-def startup():
-    init_db()
-    print("[api] ResearchMind API is running.")
 
 
 @app.get("/")
