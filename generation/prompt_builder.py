@@ -1,5 +1,3 @@
-# generation/prompt_builder.py
-
 from typing import List, Dict, Any
 
 

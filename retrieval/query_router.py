@@ -1,5 +1,3 @@
-# retrieval/query_router.py
-
 from typing import List, Dict, Any
 from retrieval.hybrid_retriever import search as hybrid_search
 from retrieval.reranker import rerank

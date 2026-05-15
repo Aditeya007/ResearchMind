@@ -1,106 +1,88 @@
-
-
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import chromadb
-import numpy as np
 from chromadb.config import Settings as ChromaSettings
 from retrieval.embedder import embed_texts, embed_query
 from configs.settings import get_settings
+import uuid
 
 settings = get_settings()
 
 _client = None
-_collection = None
+_collections = {}
 
 
-def get_collection():
-    global _client, _collection
-    if _collection is None:
+def get_client():
+    global _client
+    if _client is None:
         _client = chromadb.PersistentClient(
             path=settings.CHROMA_PERSIST_DIR,
             settings=ChromaSettings(anonymized_telemetry=False),
         )
-        _collection = _client.get_or_create_collection(
-            name=settings.COLLECTION_NAME,
+    return _client
+
+
+def get_collection(session_id: str = "default"):
+    if session_id not in _collections:
+        client = get_client()
+        collection_name = f"{settings.COLLECTION_NAME}_{session_id}"
+        _collections[session_id] = client.get_or_create_collection(
+            name=collection_name,
             metadata={"hnsw:space": "cosine"},
         )
-    return _collection
+    return _collections[session_id]
 
 
-def add_chunks(chunks: List[Dict[str, Any]]) -> None:
-    collection = get_collection()
-
+def add_chunks(chunks: List[Dict[str, Any]], session_id: str = "default") -> None:
+    collection = get_collection(session_id)
     texts = [c["text"] for c in chunks]
     metadatas = [c["metadata"] for c in chunks]
-    embeddings = np.asarray(embed_texts(texts), dtype=np.float32)
-    ids = [f"{meta.get('source', 'doc')}_{meta.get('page', meta.get('row', i))}_{i}"
-           for i, meta in enumerate(metadatas)]
-
-    collection.add(
-        ids=ids,
-        embeddings=embeddings,
-        documents=texts,
-        metadatas=metadatas,
-    )
-    print(f"[vector_store] Added {len(chunks)} chunks to '{settings.COLLECTION_NAME}'")
+    embeddings = embed_texts(texts)
+    ids = [str(uuid.uuid4()) for _ in chunks]
+    collection.add(ids=ids, embeddings=embeddings, documents=texts, metadatas=metadatas)
+    print(f"[vector_store] Added {len(chunks)} chunks for session '{session_id}'")
 
 
-def search(query: str, top_k: Optional[int] = None) -> List[Dict[str, Any]]:
-    collection = get_collection()
-    k = top_k if top_k is not None else settings.TOP_K_DENSE
+def search(query: str, session_id: str = "default", top_k: int = None) -> List[Dict[str, Any]]:
+    collection = get_collection(session_id)
+    k = top_k or settings.TOP_K_DENSE
     query_embedding = embed_query(query)
 
     results = collection.query(
         query_embeddings=[query_embedding],
-        n_results=k,
+        n_results=min(k, collection.count()) if collection.count() > 0 else 1,
         include=["documents", "metadatas", "distances"],
     )
 
-    documents = results.get("documents") or [[]]
-    metadatas = results.get("metadatas") or [[]]
-    distances = results.get("distances") or [[]]
-
     output = []
-    for text, meta, distance in zip(documents[0], metadatas[0], distances[0]):
-        output.append({
-            "text": text,
-            "metadata": meta,
-            "score": round(1 - distance, 4),
-        })
-
+    for text, meta, distance in zip(
+        results["documents"][0],
+        results["metadatas"][0],
+        results["distances"][0],
+    ):
+        output.append({"text": text, "metadata": meta, "score": round(1 - distance, 4)})
     return output
 
 
-def get_collection_count() -> int:
-    return get_collection().count()
+def get_collection_count(session_id: str = "default") -> int:
+    return get_collection(session_id).count()
 
 
-def get_all_chunks() -> List[Dict[str, Any]]:
-    collection = get_collection()
-    results = collection.get(include=["documents", "metadatas"])
+def get_session_sources(session_id: str = "default") -> List[str]:
+    collection = get_collection(session_id)
+    if collection.count() == 0:
+        return []
+    results = collection.get(include=["metadatas"])
+    sources = list({m.get("source", "unknown") for m in results["metadatas"]})
+    return sources
 
-    documents = results.get("documents") or []
-    metadatas = results.get("metadatas") or []
 
-    return [
-        {"text": text, "metadata": meta}
-        for text, meta in zip(documents, metadatas)
-        if text is not None and meta is not None
+def delete_source(source: str, session_id: str = "default") -> None:
+    collection = get_collection(session_id)
+    results = collection.get(include=["metadatas"])
+    ids_to_delete = [
+        id_ for id_, meta in zip(results["ids"], results["metadatas"])
+        if meta.get("source") == source
     ]
-
-
-if __name__ == "__main__":
-    from ingestion.pipeline import ingest_url
-
-    print("Ingesting a sample URL...")
-    chunks = ingest_url("https://en.wikipedia.org/wiki/Retrieval-augmented_generation")
-
-    add_chunks(chunks)
-    print(f"Total vectors in store: {get_collection_count()}")
-
-    print("\nSearching: 'What is RAG?'")
-    results = search("What is RAG?", top_k=3)
-    for i, r in enumerate(results, 1):
-        print(f"\n[{i}] Score: {r['score']}")
-        print(f"    Source: {r['metadata'].get('source')}")
-        print(f"    Text: {r['text'][:150]}")
+    if ids_to_delete:
+        collection.delete(ids=ids_to_delete)
+        print(f"[vector_store] Deleted {len(ids_to_delete)} chunks for source '{source}'")
