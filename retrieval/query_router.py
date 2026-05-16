@@ -29,8 +29,7 @@ def classify_query(query: str) -> str:
 
 
 def route_and_retrieve(query: str, session_id: str = "default") -> Dict[str, Any]:
-    # `session_id` is accepted for compatibility with the RAG pipeline
-    # (chat history and session-aware routing) but is not used here yet.
+    # Keep retrieval scoped to the same session that ingested the documents.
     query_type = classify_query(query)
 
     if query_type == "factual":
@@ -42,7 +41,7 @@ def route_and_retrieve(query: str, session_id: str = "default") -> Dict[str, Any
     else:
         top_k = settings.TOP_K_DENSE
 
-    chunks = hybrid_search(query, top_k=top_k)
+    chunks = hybrid_search(query, session_id=session_id, top_k=top_k)
     reranked = rerank(query, chunks)
 
     return {

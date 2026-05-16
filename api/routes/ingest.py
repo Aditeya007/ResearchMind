@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from ingestion.pipeline import ingest_pdf, ingest_url
 from retrieval.vector_store import add_chunks, get_session_sources, delete_source
@@ -5,6 +6,7 @@ from retrieval.bm25_retriever import build_index, get_corpus
 from api.schemas import IngestURLRequest, IngestResponse, DeleteSourceRequest
 import tempfile
 import os
+import shutil
 
 router = APIRouter(prefix="/ingest", tags=["ingest"])
 
@@ -29,18 +31,22 @@ def ingest_from_url(request: IngestURLRequest):
 def ingest_from_pdf(file: UploadFile = File(...), session_id: str = "default"):
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are accepted.")
+
+    tmp_path = None
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-            tmp.write(file.file.read())
+            shutil.copyfileobj(file.file, tmp)
             tmp_path = tmp.name
 
         chunks = ingest_pdf(tmp_path)
         add_chunks(chunks, session_id=session_id)
         _rebuild_index(chunks, session_id)
-        os.remove(tmp_path)
         return IngestResponse(message="PDF ingested successfully.", chunks_added=len(chunks))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
 
 @router.get("/sources")
