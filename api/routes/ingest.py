@@ -2,7 +2,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from ingestion.pipeline import ingest_pdf, ingest_url
 from retrieval.vector_store import add_chunks, get_session_sources, delete_source
-from retrieval.bm25_retriever import build_index, get_corpus
+from retrieval.bm25_retriever import build_index, get_corpus, delete_source as bm25_delete_source
 from api.schemas import IngestURLRequest, IngestResponse, DeleteSourceRequest
 import tempfile
 import os
@@ -59,6 +59,7 @@ def list_sources(session_id: str = "default"):
 def remove_source(request: DeleteSourceRequest):
     try:
         delete_source(request.source, session_id=request.session_id)
+        bm25_delete_source(request.source, session_id=request.session_id)
         return {"message": f"Source '{request.source}' deleted."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
