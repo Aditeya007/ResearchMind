@@ -1,6 +1,6 @@
 # 🧠 ResearchMind
 
-> A multi-source Retrieval Augmented Generation (RAG) system with hybrid retrieval, cross-encoder reranking, adaptive query routing, per-session knowledge isolation, and automated faithfulness evaluation.
+> A multi-source Retrieval Augmented Generation (RAG) system with hybrid retrieval, cross-encoder reranking, adaptive query routing, per session knowledge isolation, and automated faithfulness evaluation.
 
 ---
 
